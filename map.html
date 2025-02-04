@@ -462,7 +462,7 @@ function checkProximity(userLocation) {
                 utils.updateClockDisplay(timeOutside); // Update the clock display
 
                 if (timeOutside >= 2 * 1000) { // 2 hours in milliseconds
-                    utils.showNotification("You have been outside the radius for 2 hours!");
+                    utils.showNotification("You have been driving for 2 hours!");
                     clearInterval(state.outsideTimer);
                     clearInterval(state.clockInterval);
                     state.outsideTimer = null;

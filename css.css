@@ -117,3 +117,21 @@ body {
     from {background-color: green;}
     to {background-color: white;}
 }
+/* Clock Display Styles */
+#clock-display {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    z-index: 1000;
+    display: none; /* Hidden by default */
+}
+
+#clock-time {
+    font-weight: bold;
+    color: #00ff00; /* Green color for the time */
+}

@@ -120,7 +120,7 @@
             <a href="history.html">History</a>
         </nav>
     </header>
-
+    
     <div class="history-container">
         <h1>Visit History</h1>
         <ul id="history-list"></ul>
@@ -129,188 +129,34 @@
     <div id="notification" class="notification"></div>
 
     <script>
-        // Configuration
-        const CONFIG = {
-            GEOLOCATION: {
-                WATCH_OPTIONS: {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 10000
-                },
-                UPDATE_INTERVAL: 1000, // 1 second
-                PROXIMITY_THRESHOLD: 0.1 // 100 meters in km
-            }
-        };
+         // Retrieve location history from localStorage
+         const history = JSON.parse(localStorage.getItem('locationHistory')) || [];
 
-        // Pinned locations
-        const locations = [
-            {
-                lat: 13.7563,
-                lng: 100.5018,
-                title: "Bangkok",
-                description: "City of Angels"
-            },
-            {
-                lat: 13.825832971070632,
-                lng: 100.57177728855734,
-                title: "Ohio Inkjet",
-                description: "Bu gaan Ban guu"
-            },
-            {
-                lat: 34.0522,
-                lng: -118.2437,
-                title: "Los Angeles",
-                description: "City of Angels"
-            },
-            {
-                lat: 40.7128,
-                lng: -74.0060,
-                title: "New York",
-                description: "The Big Apple"
-            }
-        ];
+// Display history
+const historyList = document.getElementById('history-list');
+if (history.length === 0) {
+    historyList.innerHTML = `<p class="no-history">No location history available.</p>`;
+} else {
+    history.forEach(location => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerHTML = `
+            <h3>${location.title}</h3>
+            <p>${location.description}</p>
+            ${location.timestamp ? `<p class="timestamp">Visited on: ${location.timestamp}</p>` : ''}
+            <img src="${location.image}" alt="${location.title}">
+        `;
+        historyList.appendChild(item);
+    });
+}
 
-        // State
-        const state = {
-            updateInterval: null,
-            lastUpdate: null
-        };
-
-        // Utility functions
-        const utils = {
-            getDistance(coord1, coord2) {
-                const R = 6371;
-                const dLat = (coord2.lat - coord1.lat) * (Math.PI / 180);
-                const dLng = (coord2.lng - coord1.lng) * (Math.PI / 180);
-                const a =
-                    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(coord1.lat * (Math.PI / 180)) *
-                    Math.cos(coord2.lat * (Math.PI / 180)) *
-                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return R * c;
-            },
-
-            showNotification(message) {
-                const notification = document.getElementById('notification');
-                notification.textContent = message;
-                notification.style.display = 'block';
-                setTimeout(() => {
-                    notification.style.display = 'none';
-                }, 3000);
-            },
-
-            // Function to calculate time difference in hours and minutes
-            getTimeSpent(entryTime, exitTime) {
-                if (!entryTime || !exitTime) return "N/A";
-
-                const entry = new Date(entryTime);
-                const exit = new Date(exitTime);
-                const diffInMs = exit - entry; // Difference in milliseconds
-
-                const hours = Math.floor(diffInMs / (1000 * 60 * 60));
-                const minutes = Math.floor((diffInMs % (1000 * 60 * 60)) / (1000 * 60));
-
-                return `${hours}h ${minutes}m`;
-            }
-        };
-
-        // Visit history management
-        const visitHistory = {
-            get() {
-                try {
-                    return JSON.parse(localStorage.getItem("visitHistory")) || [];
-                } catch (e) {
-                    console.error('Error reading visit history:', e);
-                    return [];
-                }
-            },
-
-            update(history) {
-                try {
-                    localStorage.setItem("visitHistory", JSON.stringify(history));
-                    this.updateUI();
-                } catch (e) {
-                    console.error('Error saving visit history:', e);
-                }
-            },
-
-            updateUI() {
-                const history = this.get();
-                const historyList = document.getElementById("history-list");
-                historyList.innerHTML = history
-                    .map(visit => `
-                        <li>
-                            <strong>${visit.title}</strong><br>
-                            Arrival: ${visit.entryTime}<br>
-                            Departure: ${visit.exitTime || "Still in location"}<br>
-                            Time Spent: ${utils.getTimeSpent(visit.entryTime, visit.exitTime)}
-                        </li>
-                    `)
-                    .join("");
-            }
-        };
-
-        // Start location tracking
-        function startLocationTracking() {
-            if (navigator.geolocation) {
-                state.updateInterval = setInterval(() => {
-                    navigator.geolocation.getCurrentPosition(
-                        handleLocationUpdate,
-                        handleLocationError,
-                        CONFIG.GEOLOCATION.WATCH_OPTIONS
-                    );
-                }, CONFIG.GEOLOCATION.UPDATE_INTERVAL);
-            } else {
-                console.error("Geolocation is not supported by this browser.");
-            }
-        }
-
-        // Handle location update
-        function handleLocationUpdate(position) {
-            const userLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-            };
-
-            checkProximity(userLocation);
-        }
-
-        // Check proximity to pinned locations
-        function checkProximity(userLocation) {
-            const history = visitHistory.get();
-            locations.forEach(location => {
-                const distance = utils.getDistance(userLocation, location);
-                const existingVisit = history.find(v => v.title === location.title && !v.exitTime);
-
-                if (distance < CONFIG.GEOLOCATION.PROXIMITY_THRESHOLD) {
-                    if (!existingVisit) {
-                        // User entered the location
-                        history.push({
-                            title: location.title,
-                            entryTime: new Date().toLocaleString(),
-                            exitTime: null
-                        });
-                        visitHistory.update(history);
-                        utils.showNotification(`You have entered ${location.title}`);
-                    }
-                } else if (existingVisit) {
-                    // User left the location
-                    existingVisit.exitTime = new Date().toLocaleString();
-                    visitHistory.update(history);
-                    utils.showNotification(`You have left ${location.title}`);
-                }
-            });
-        }
-
-        // Handle location error
-        function handleLocationError(error) {
-            console.error(`Error getting location: ${error.message}`);
-        }
-
-        // Initialize
-        visitHistory.updateUI();
-        startLocationTracking();
+// Clear History Button
+const clearHistoryBtn = document.getElementById('clear-history-btn');
+clearHistoryBtn.addEventListener('click', () => {
+    localStorage.removeItem('locationHistory');
+    alert('History cleared!');
+    historyList.innerHTML = `<p class="no-history">No location history available.</p>`;
+});
     </script>
 </body>
 </html>

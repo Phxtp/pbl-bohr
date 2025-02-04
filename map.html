@@ -258,263 +258,238 @@
                 title: "New York",
                 description: "The Big Apple",
                 image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/New_york_times_square-terabass.jpg/800px-New_york_times_square-terabass.jpg"
-            },
-            {
-                lat: 13.242771832451698,
-                lng: 99.82379666846042,
-                title: "Khao Yoi Highway Division(ขาออก)",
-                description: "ห้องน้ำ ที่จอดพัก",
-            },
-            {
-                lat: 12.95634487648472,
-                lng: 99.90197570237969,
-                title: "Government office(ขาเข้า)",
-                description: "ห้องน้ำ ที่จอดพัก",
-            },
-            {
-                lat: 12.42560155177143,
-                lng: 99.91957957697507,
-                title: "ร้านดีไซน์ประดับยนต์(ขาออก)",
-                description: "ที่จอดพัก ร้านน้ำ ห้องน้ำ" 
-            },
-            {
-                lat: 12.434762641308907,
-                lng: 99.9136311080341,
-                title: "Lpg(ขาเข้า)",
-                description: "ที่จอดพัก ที่เติมน้ำมัน ร้านน้ำ ห้องน้ำ" 
-            },
-            {
-                lat: 13.055263764751674,
-                lng: 99.94346982823382,
-                title: "ร้านอาหารกิ่งกาญจน์(ขาเข้า)",
-                description: "ร้านอาหารมีที่จอดมีห้องน้ำ"
-            },
-            {
-                lat: 12.200084338899646,
-                lng: 99.8566032289355,
-                title: "ปั้ม PT ฉ.สามร้อยยอด",
-                description: "มีที่เติมน้ำมัน มีห้องน้ำ(สะอาด) มีร้านอาหาร" 
-            },
-            {
-                lat: 12.146615994245714,
-                lng: 9.84847554401378,
-                title: "ปั้มน้ำมัน ดีเซล B7 บจ.ดอนกลางออยล์ (ขาเข้า)",
-                description: "มีที่เติมน้ำมัน ที่จอดพัก มีห้องน้ำ? "
-            },
-            {
-                lat: 13.819507991819746,
-                lng:  100.55942099497231,
-                title: "Horwang school",
-                description: "wowwwwwww"
-            },
-
+            }
         ];
 
-        // State management
-        const state = {
-            map: null,
-            markers: new Map(),
-            currentInfoWindow: null,
-            updateInterval: null,
-            userMarker: null,
-            lastUpdate: null,
-            outsideTimer: null, // Timer for tracking time outside the radius
-            outsideStartTime: null // Start time when user is outside the radius
-        };
+        // Clear localStorage when the page loads
+window.addEventListener('load', () => {
+    localStorage.clear();
+    console.log('localStorage cleared on page load.');
+});
 
-        // Utility functions
-        const utils = {
-            getDistance(coord1, coord2) {
-                const R = 6371;
-                const dLat = (coord2.lat - coord1.lat) * (Math.PI / 180);
-                const dLng = (coord2.lng - coord1.lng) * (Math.PI / 180);
-                const a =
-                    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(coord1.lat * (Math.PI / 180)) *
-                    Math.cos(coord2.lat * (Math.PI / 180)) *
-                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return R * c;
-            },
+// State management
+const state = {
+    map: null,
+    markers: new Map(),
+    currentInfoWindow: null,
+    updateInterval: null,
+    userMarker: null,
+    lastUpdate: null,
+    outsideTimer: null, // Timer for tracking time outside the radius
+    outsideStartTime: null, // Start time when user is outside the radius
+    insideStartTime: null, // Start time when user is inside the radius
+    totalOutsideTime: 0, // Total time spent outside the radius
+    isTakingBreak: false // Flag to check if the user is taking a break
+};
 
-            showError(message) {
-                const errorElement = document.getElementById('error-message');
-                errorElement.textContent = message;
-                errorElement.style.display = 'block';
-                setTimeout(() => {
-                    errorElement.style.display = 'none';
-                }, 5000);
-            },
+// Utility functions
+const utils = {
+    getDistance(coord1, coord2) {
+        const R = 6371;
+        const dLat = (coord2.lat - coord1.lat) * (Math.PI / 180);
+        const dLng = (coord2.lng - coord1.lng) * (Math.PI / 180);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(coord1.lat * (Math.PI / 180)) *
+            Math.cos(coord2.lat * (Math.PI / 180)) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    },
 
-            showNotification(message) {
-                const notification = document.getElementById('notification');
-                notification.textContent = message;
-                notification.style.display = 'block';
-                setTimeout(() => {
-                    notification.style.display = 'none';
-                }, 2000); // Hide after 2 seconds
-            },
+    showError(message) {
+        const errorElement = document.getElementById('error-message');
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        setTimeout(() => {
+            errorElement.style.display = 'none';
+        }, 5000);
+    },
 
-            // Function to format time in hours and minutes
-            formatTime(ms) {
-                const hours = Math.floor(ms / (1000 * 60 * 60));
-                const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-                return `${hours}h ${minutes}m`;
-            }
-        };
+    showNotification(message) {
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.style.display = 'block';
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 5000); // Hide after 5 seconds
+    },
 
-        // Map initialization and management
-        function initMap() {
-            const mapElement = document.getElementById("map");
-            state.map = new google.maps.Map(mapElement, {
-                ...CONFIG.MAP_OPTIONS,
-                center: locations[0]
-            });
+    // Function to format time in hours and minutes
+    formatTime(ms) {
+        const hours = Math.floor(ms / (1000 * 60 * 60));
+        const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+        return `${hours}h ${minutes}m`;
+    }
+};
 
-            locations.forEach(createMarker);
-            document.getElementById('loading-overlay').style.display = 'none';
-            
-            if (navigator.geolocation) {
-                startLocationTracking();
-            } else {
-                utils.showError("Geolocation is not supported by this browser.");
-            }
+// Map initialization and management
+function initMap() {
+    const mapElement = document.getElementById("map");
+    state.map = new google.maps.Map(mapElement, {
+        ...CONFIG.MAP_OPTIONS,
+        center: locations[0]
+    });
+
+    locations.forEach(createMarker);
+    document.getElementById('loading-overlay').style.display = 'none';
+    
+    if (navigator.geolocation) {
+        startLocationTracking();
+    } else {
+        utils.showError("Geolocation is not supported by this browser.");
+    }
+}
+
+function createMarker(location) {
+    const marker = new google.maps.Marker({
+        position: { lat: location.lat, lng: location.lng },
+        map: state.map,
+        title: location.title
+    });
+
+    const infoWindow = new google.maps.InfoWindow({
+        content: `
+            <div class="info-window">
+                <h3>${location.title}</h3>
+                <p>${location.description}</p>
+                <img src="${location.image}" alt="${location.title}" style="width: 200px; height: auto; border-radius: 5px;">
+            </div>
+        `
+    });
+
+    marker.addListener("click", () => {
+        if (state.currentInfoWindow) {
+            state.currentInfoWindow.close();
         }
+        infoWindow.open(state.map, marker);
+        state.currentInfoWindow = infoWindow;
+    });
 
-        function createMarker(location) {
-            const marker = new google.maps.Marker({
-                position: { lat: location.lat, lng: location.lng },
-                map: state.map,
-                title: location.title
-            });
+    state.markers.set(location.title, marker);
+}
 
-            const infoWindow = new google.maps.InfoWindow({
-                content: `
-                    <div class="info-window">
-                        <h3>${location.title}</h3>
-                        <p>${location.description}</p>
-                        <img src="${location.image}" alt="${location.title}" style="width: 200px; height: auto; border-radius: 5px;">
-                    </div>
-                `
-            });
+function startLocationTracking() {
+    // Initial location update
+    updateUserLocation();
+    
+    // Set up interval for regular updates
+    state.updateInterval = setInterval(() => {
+        updateUserLocation();
+    }, CONFIG.GEOLOCATION.UPDATE_INTERVAL);
+}
 
-            marker.addListener("click", () => {
-                if (state.currentInfoWindow) {
-                    state.currentInfoWindow.close();
-                }
-                infoWindow.open(state.map, marker);
-                state.currentInfoWindow = infoWindow;
-            });
+function updateUserLocation() {
+    utils.showNotification("Updating location...");
+    navigator.geolocation.getCurrentPosition(
+        handleLocationUpdate,
+        handleLocationError,
+        CONFIG.GEOLOCATION.WATCH_OPTIONS
+    );
+}
 
-            state.markers.set(location.title, marker);
-        }
+function handleLocationUpdate(position) {
+    const userLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+    };
 
-        function startLocationTracking() {
-            // Initial location update
-            updateUserLocation();
-            
-            // Set up interval for regular updates
-            state.updateInterval = setInterval(() => {
-                updateUserLocation();
-            }, CONFIG.GEOLOCATION.UPDATE_INTERVAL);
-        }
+    updateUserMarker(userLocation);
+    checkProximity(userLocation);
+}
 
-        function updateUserLocation() {
-            utils.showNotification("Updating location...");
-            navigator.geolocation.getCurrentPosition(
-                handleLocationUpdate,
-                handleLocationError,
-                CONFIG.GEOLOCATION.WATCH_OPTIONS
-            );
-        }
-
-        function handleLocationUpdate(position) {
-            const userLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-            };
-
-            updateUserMarker(userLocation);
-            checkProximity(userLocation);
-        }
-
-        function updateUserMarker(position) {
-            if (state.userMarker) {
-                state.userMarker.setPosition(position);
-            } else {
-                state.userMarker = new google.maps.Marker({
-                    position: position,
-                    map: state.map,
-                    title: "Your Location",
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 10,
-                        fillColor: "#4285F4",
-                        fillOpacity: 0.8,
-                        strokeColor: "white",
-                        strokeWeight: 2
-                    }
-                });
-
-                // Center map on first location fix
-                state.map.setCenter(position);
-                state.map.setZoom(15);
-            }
-        }
-
-        function checkProximity(userLocation) {
-            let isInsideRadius = false;
-
-            locations.forEach(location => {
-                const distance = utils.getDistance(userLocation, location);
-                if (distance < CONFIG.GEOLOCATION.PROXIMITY_THRESHOLD) {
-                    isInsideRadius = true;
-                }
-            });
-
-            if (!isInsideRadius) {
-                // User is outside the radius of all pinned locations
-                if (!state.outsideStartTime) {
-                    // Start the timer
-                    state.outsideStartTime = new Date();
-                    state.outsideTimer = setInterval(() => {
-                        const currentTime = new Date();
-                        const timeOutside = currentTime - state.outsideStartTime;
-
-                        if (timeOutside >= 2 * 60 * 60 * 1000) { // 2 hours in milliseconds
-                            utils.showNotification("You have been outside the radius for 2 hours!");
-                            clearInterval(state.outsideTimer);
-                            state.outsideTimer = null;
-                            state.outsideStartTime = null;
-                        }
-                    }, 1000); // Check every second
-                }
-            } else {
-                // User is inside the radius of at least one pinned location
-                if (state.outsideTimer) {
-                    clearInterval(state.outsideTimer);
-                    state.outsideTimer = null;
-                    state.outsideStartTime = null;
-                }
-            }
-        }
-
-        function handleLocationError(error) {
-            utils.showError(`Error getting location: ${error.message}`);
-        }
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (state.updateInterval) {
-                clearInterval(state.updateInterval);
-            }
-            if (state.outsideTimer) {
-                clearInterval(state.outsideTimer);
+function updateUserMarker(position) {
+    if (state.userMarker) {
+        state.userMarker.setPosition(position);
+    } else {
+        state.userMarker = new google.maps.Marker({
+            position: position,
+            map: state.map,
+            title: "Your Location",
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: "#4285F4",
+                fillOpacity: 0.8,
+                strokeColor: "white",
+                strokeWeight: 2
             }
         });
 
-        // Initialize the map
-        window.initMap = initMap;
+        // Center map on first location fix
+        state.map.setCenter(position);
+        state.map.setZoom(15);
+    }
+}
+
+function checkProximity(userLocation) {
+    let isInsideRadius = false;
+
+    locations.forEach(location => {
+        const distance = utils.getDistance(userLocation, location);
+        if (distance < CONFIG.GEOLOCATION.PROXIMITY_THRESHOLD) {
+            isInsideRadius = true;
+        }
+    });
+
+    if (!isInsideRadius) {
+        // User is outside the radius of all pinned locations
+        if (!state.outsideStartTime) {
+            // Start the timer
+            state.outsideStartTime = new Date();
+            state.outsideTimer = setInterval(() => {
+                const currentTime = new Date();
+                const timeOutside = currentTime - state.outsideStartTime + state.totalOutsideTime;
+
+                if (timeOutside >= 2 * 60 * 60 * 1000) { // 2 hours in milliseconds
+                    utils.showNotification("You have been outside the radius for 2 hours!");
+                    clearInterval(state.outsideTimer);
+                    state.outsideTimer = null;
+                    state.outsideStartTime = null;
+                    state.totalOutsideTime = 0;
+                }
+            }, 1000); // Check every second
+        }
+    } else {
+        // User is inside the radius of at least one pinned location
+        if (state.outsideTimer) {
+            clearInterval(state.outsideTimer);
+            state.outsideTimer = null;
+            state.totalOutsideTime += new Date() - state.outsideStartTime;
+            state.outsideStartTime = null;
+        }
+
+        if (!state.insideStartTime) {
+            state.insideStartTime = new Date();
+        } else {
+            const currentTime = new Date();
+            const timeInside = currentTime - state.insideStartTime;
+
+            if (timeInside >= 5 * 60 * 1000) { // 5 minutes in milliseconds
+                state.isTakingBreak = true;
+                utils.showNotification("You are taking a break. Timer paused.");
+                state.insideStartTime = null;
+            }
+        }
+    }
+}
+
+function handleLocationError(error) {
+    utils.showError(`Error getting location: ${error.message}`);
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (state.updateInterval) {
+        clearInterval(state.updateInterval);
+    }
+    if (state.outsideTimer) {
+        clearInterval(state.outsideTimer);
+    }
+});
+
+// Initialize the map
+window.initMap = initMap;
     </script>
     <script
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD41UPed9qvPKHhd5kU09b8ji52hSp_eSg&callback=initMap"

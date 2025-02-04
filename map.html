@@ -242,13 +242,7 @@
                 description: "City of Angels",
                 image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Bangkok_Skyline.jpg/800px-Bangkok_Skyline.jpg"
             },
-            {
-                lat: 13.825936162059861, 
-                lng: 100.57098012277402,
-                title: "Ohio Inkjet",
-                description: "Bu gaan Ban guu",
-                image: "https://lh5.googleusercontent.com/p/AF1QipPvtWY8gANzftqX4OFG8ERaF5WEsNr_BCb2ysp3=w408-h288-k-no"
-            },
+            
             {
                 lat: 34.0522,
                 lng: -118.2437,
@@ -264,18 +258,34 @@
                 image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/New_york_times_square-terabass.jpg/800px-New_york_times_square-terabass.jpg"
             },
             {
-                lat: 13.921195056215595, 
-                lng: 100.58248768554849,
-                title: "ban ga",
+                lat: 13.826180911602226, 
+                lng: 100.57033512017142,
+                title: "Bu gaan",
                 description: "The Big Apple",
                 image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/New_york_times_square-terabass.jpg/800px-New_york_times_square-terabass.jpg"
-            }
+            },
         ];
 
-        // Clear localStorage when the page loads
-window.addEventListener('load', () => {
-    localStorage.clear();
-    console.log('localStorage cleared on page load.');
+        window.addEventListener('load', () => {
+    const storageKey = 'lastClearedTimestamp';
+    const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
+
+    // Get the last cleared timestamp from localStorage
+    const lastClearedTimestamp = localStorage.getItem(storageKey);
+
+    // Get the current time
+    const currentTime = new Date().getTime();
+
+    // If there's no timestamp or 3 days have passed, clear localStorage
+    if (!lastClearedTimestamp || (currentTime - lastClearedTimestamp > threeDaysInMillis)) {
+        localStorage.clear();
+        console.log('localStorage cleared.');
+
+        // Update the timestamp in localStorage
+        localStorage.setItem(storageKey, currentTime.toString());
+    } else {
+        console.log('localStorage not cleared yet.');
+    }
 });
 
 // State management
@@ -439,6 +449,19 @@ function updateUserMarker(position) {
         state.map.setZoom(15);
     }
 }
+// Function to save location history
+function saveLocationHistory(location) {
+    let history = JSON.parse(localStorage.getItem('locationHistory')) || [];
+    // Check if the location is already in history
+    const isDuplicate = history.some(entry => 
+        entry.lat === location.lat && entry.lng === location.lng
+    );
+    if (!isDuplicate) {
+        location.timestamp = new Date().toLocaleString(); // Add timestamp
+        history.push(location);
+        localStorage.setItem('locationHistory', JSON.stringify(history));
+    }
+}
 
 function checkProximity(userLocation) {
     let isInsideRadius = false;
@@ -461,8 +484,8 @@ function checkProximity(userLocation) {
                 const timeOutside = currentTime - state.outsideStartTime + state.totalOutsideTime;
                 utils.updateClockDisplay(timeOutside); // Update the clock display
 
-                if (timeOutside >= 2 * 1000) { // 2 hours in milliseconds
-                    utils.showNotification("You have been driving for 2 hours!");
+                if (timeOutside >= 2 * 60 * 60 * 1000) { // 2 hours in milliseconds
+                    utils.showNotification("You have been outside the radius for 2 hours!");
                     clearInterval(state.outsideTimer);
                     clearInterval(state.clockInterval);
                     state.outsideTimer = null;

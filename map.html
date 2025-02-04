@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE-edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOHR</title>
+    <style>
+        /* Existing styles */
+        #map-container {
+            position: relative;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 1200px;
+        }
+
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-size: 1.5em;
+        }
+
+        .error-message {
+            background-color: #fee;
+            color: #c00;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        /* New styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: url('bg2.jpg') no-repeat;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 100px;
+            background-color: white;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 32px;
+            color: black;
+            text-decoration: none;
+            font-weight: 700;
+            animation-name: logo;
+            animation-duration: 1s;
+        }
+
+        .navbar a {
+            position: relative;
+            font-size: 20px;
+            color: black;
+            font-weight: 500;
+            text-decoration: none;
+            margin-left: 50px;
+            top: 8px;
+            animation-name: nav1;
+            animation-duration: 1s;
+        }
+
+        .navbar a::before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: black;
+        }
+
+        .navbar a:hover::before {
+            width: 100%;
+            background-color: green;
+        }
+
+        .navbar a:hover {
+            color: green;
+        }
+
+        .info1 {
+            margin-top: 200px;
+            font-size: 100px;
+            animation-name: title1;
+            animation-duration: 1.5s;
+            color: white;
+        }
+
+        .slogan {
+            font-size: 30px;
+            margin-top: 0px;
+            color: white;
+        }
+
+        .btn1 {
+            font-size: 20px;
+            margin-top: 10px;
+            padding: 5px 45px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            background-color: green;
+            color: white;
+            overflow: hidden;
+        }
+
+        .btn1:hover {
+            animation-name: btn1;
+            animation-duration: 0.5s;
+            background-color: white;
+            color: black;
+        }
+
+        @keyframes nav1 {
+            from { opacity: 0%; }
+            to { opacity: 100%; }
+        }
+
+        @keyframes logo {
+            from { opacity: 0%; }
+            to { opacity: 100%; }
+        }
+
+        @keyframes title1 {
+            from { margin-top: 220px; }
+            to { margin-top: 200px; }
+        }
+
+        @keyframes btn1 {
+            from { background-color: #008000; }
+            to { background-color: white; }
+        }
+
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #008000;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="#" class="logo">BOHR</a>
+        <nav class="navbar">
+            <a href="index.html">Home</a>
+            <a href="#">About</a>
+            <a href="map.html">Map</a>
+            <a href="history.html">History</a>
+        </nav>
+    </header>
+
+    <center><h1 class="info1">Explore our map.</h1></center>
+    <div class="frame1">
+        <center><div class="slogan">Parking is important. Be safe and comfort.</div></center>
+        <center><a class="btn1" href="history.html">History</a></center>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map-container">
+        <div id="loading-overlay">Loading map...</div>
+        <div id="map"></div>
+        <div id="error-message" class="error-message"></div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">Location updated</div>
+
+    <script>
+        // Configuration object to store all constants
+        const CONFIG = {
+            GEOLOCATION: {
+                WATCH_OPTIONS: {
+                    enableHighAccuracy: true,
+                    maximumAge: 0, // 30 seconds
+                    timeout: 10000 // 10 seconds
+                },
+                UPDATE_INTERVAL: 1000, // 1 second
+                PROXIMITY_THRESHOLD: 0.1 // 100 meters in km
+            },
+            MAP_OPTIONS: {
+                zoom: 4,
+                styles: [
+                    {
+                        featureType: "poi",
+                        elementType: "labels",
+                        stylers: [{ visibility: "off" }]
+                    }
+                ]
+            }
+        };
+
+        // Location data store
+        const locations = [
+            {
+                lat: 13.7563,
+                lng: 100.5018,
+                title: "Bangkok",
+                description: "City of Angels",
+                image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Bangkok_Skyline.jpg/800px-Bangkok_Skyline.jpg"
+            },
+            {
+                lat: 13.825832971070632,
+                lng: 100.57177728855734,
+                title: "Ohio Inkjet",
+                description: "Bu gaan Ban guu",
+                image: "https://lh5.googleusercontent.com/p/AF1QipPvtWY8gANzftqX4OFG8ERaF5WEsNr_BCb2ysp3=w408-h288-k-no"
+            },
+            {
+                lat: 34.0522,
+                lng: -118.2437,
+                title: "Los Angeles",
+                description: "City of Angels",
+                image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Los_Angeles_-_Echo_Park_Lake.jpg/800px-Los_Angeles_-_Echo_Park_Lake.jpg"
+            },
+            {
+                lat: 40.7128,
+                lng: -74.0060,
+                title: "New York",
+                description: "The Big Apple",
+                image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/New_york_times_square-terabass.jpg/800px-New_york_times_square-terabass.jpg"
+            },
+            {
+                lat: 13.242771832451698,
+                lng: 99.82379666846042,
+                title: "Khao Yoi Highway Division(ขาออก)",
+                description: "ห้องน้ำ ที่จอดพัก",
+            },
+            {
+                lat: 12.95634487648472,
+                lng: 99.90197570237969,
+                title: "Government office(ขาเข้า)",
+                description: "ห้องน้ำ ที่จอดพัก",
+            },
+            {
+                lat: 12.42560155177143,
+                lng: 99.91957957697507,
+                title: "ร้านดีไซน์ประดับยนต์(ขาออก)",
+                description: "ที่จอดพัก ร้านน้ำ ห้องน้ำ" 
+            },
+            {
+                lat: 12.434762641308907,
+                lng: 99.9136311080341,
+                title: "Lpg(ขาเข้า)",
+                description: "ที่จอดพัก ที่เติมน้ำมัน ร้านน้ำ ห้องน้ำ" 
+            },
+            {
+                lat: 13.055263764751674,
+                lng: 99.94346982823382,
+                title: "ร้านอาหารกิ่งกาญจน์(ขาเข้า)",
+                description: "ร้านอาหารมีที่จอดมีห้องน้ำ"
+            },
+            {
+                lat: 12.200084338899646,
+                lng: 99.8566032289355,
+                title: "ปั้ม PT ฉ.สามร้อยยอด",
+                description: "มีที่เติมน้ำมัน มีห้องน้ำ(สะอาด) มีร้านอาหาร" 
+            },
+            {
+                lat: 12.146615994245714,
+                lng: 9.84847554401378,
+                title: "ปั้มน้ำมัน ดีเซล B7 บจ.ดอนกลางออยล์ (ขาเข้า)",
+                description: "มีที่เติมน้ำมัน ที่จอดพัก มีห้องน้ำ? "
+            },
+            
+
+        ];
+
+        // State management
+        const state = {
+            map: null,
+            markers: new Map(),
+            currentInfoWindow: null,
+            updateInterval: null,
+            userMarker: null,
+            lastUpdate: null,
+            outsideTimer: null, // Timer for tracking time outside the radius
+            outsideStartTime: null // Start time when user is outside the radius
+        };
+
+        // Utility functions
+        const utils = {
+            getDistance(coord1, coord2) {
+                const R = 6371;
+                const dLat = (coord2.lat - coord1.lat) * (Math.PI / 180);
+                const dLng = (coord2.lng - coord1.lng) * (Math.PI / 180);
+                const a =
+                    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(coord1.lat * (Math.PI / 180)) *
+                    Math.cos(coord2.lat * (Math.PI / 180)) *
+                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            },
+
+            showError(message) {
+                const errorElement = document.getElementById('error-message');
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 5000);
+            },
+
+            showNotification(message) {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.style.display = 'block';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 2000); // Hide after 2 seconds
+            },
+
+            // Function to format time in hours and minutes
+            formatTime(ms) {
+                const hours = Math.floor(ms / (1000 * 60 * 60));
+                const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+                return `${hours}h ${minutes}m`;
+            }
+        };
+
+        // Map initialization and management
+        function initMap() {
+            const mapElement = document.getElementById("map");
+            state.map = new google.maps.Map(mapElement, {
+                ...CONFIG.MAP_OPTIONS,
+                center: locations[0]
+            });
+
+            locations.forEach(createMarker);
+            document.getElementById('loading-overlay').style.display = 'none';
+            
+            if (navigator.geolocation) {
+                startLocationTracking();
+            } else {
+                utils.showError("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function createMarker(location) {
+            const marker = new google.maps.Marker({
+                position: { lat: location.lat, lng: location.lng },
+                map: state.map,
+                title: location.title
+            });
+
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div class="info-window">
+                        <h3>${location.title}</h3>
+                        <p>${location.description}</p>
+                        <img src="${location.image}" alt="${location.title}" style="width: 200px; height: auto; border-radius: 5px;">
+                    </div>
+                `
+            });
+
+            marker.addListener("click", () => {
+                if (state.currentInfoWindow) {
+                    state.currentInfoWindow.close();
+                }
+                infoWindow.open(state.map, marker);
+                state.currentInfoWindow = infoWindow;
+            });
+
+            state.markers.set(location.title, marker);
+        }
+
+        function startLocationTracking() {
+            // Initial location update
+            updateUserLocation();
+            
+            // Set up interval for regular updates
+            state.updateInterval = setInterval(() => {
+                updateUserLocation();
+            }, CONFIG.GEOLOCATION.UPDATE_INTERVAL);
+        }
+
+        function updateUserLocation() {
+            utils.showNotification("Updating location...");
+            navigator.geolocation.getCurrentPosition(
+                handleLocationUpdate,
+                handleLocationError,
+                CONFIG.GEOLOCATION.WATCH_OPTIONS
+            );
+        }
+
+        function handleLocationUpdate(position) {
+            const userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+
+            updateUserMarker(userLocation);
+            checkProximity(userLocation);
+        }
+
+        function updateUserMarker(position) {
+            if (state.userMarker) {
+                state.userMarker.setPosition(position);
+            } else {
+                state.userMarker = new google.maps.Marker({
+                    position: position,
+                    map: state.map,
+                    title: "Your Location",
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: "#4285F4",
+                        fillOpacity: 0.8,
+                        strokeColor: "white",
+                        strokeWeight: 2
+                    }
+                });
+
+                // Center map on first location fix
+                state.map.setCenter(position);
+                state.map.setZoom(15);
+            }
+        }
+
+        function checkProximity(userLocation) {
+            let isInsideRadius = false;
+
+            locations.forEach(location => {
+                const distance = utils.getDistance(userLocation, location);
+                if (distance < CONFIG.GEOLOCATION.PROXIMITY_THRESHOLD) {
+                    isInsideRadius = true;
+                }
+            });
+
+            if (!isInsideRadius) {
+                // User is outside the radius of all pinned locations
+                if (!state.outsideStartTime) {
+                    // Start the timer
+                    state.outsideStartTime = new Date();
+                    state.outsideTimer = setInterval(() => {
+                        const currentTime = new Date();
+                        const timeOutside = currentTime - state.outsideStartTime;
+
+                        if (timeOutside >= 2 * 60 * 60 * 1000) { // 2 hours in milliseconds
+                            utils.showNotification("You have been outside the radius for 2 hours!");
+                            clearInterval(state.outsideTimer);
+                            state.outsideTimer = null;
+                            state.outsideStartTime = null;
+                        }
+                    }, 1000); // Check every second
+                }
+            } else {
+                // User is inside the radius of at least one pinned location
+                if (state.outsideTimer) {
+                    clearInterval(state.outsideTimer);
+                    state.outsideTimer = null;
+                    state.outsideStartTime = null;
+                }
+            }
+        }
+
+        function handleLocationError(error) {
+            utils.showError(`Error getting location: ${error.message}`);
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (state.updateInterval) {
+                clearInterval(state.updateInterval);
+            }
+            if (state.outsideTimer) {
+                clearInterval(state.outsideTimer);
+            }
+        });
+
+        // Initialize the map
+        window.initMap = initMap;
+    </script>
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD41UPed9qvPKHhd5kU09b8ji52hSp_eSg&callback=initMap"
+        async
+        defer
+    ></script>
+</body>
+</html>

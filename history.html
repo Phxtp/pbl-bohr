@@ -82,19 +82,59 @@
         .history-container h1 {
             margin-bottom: 20px;
             color: #333;
+            text-align: center;
         }
 
-        .history-container ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        .history-container ul li {
+        .history-item {
             background-color: #f9f9f9;
             margin: 10px 0;
             padding: 15px;
             border: 1px solid #ddd;
             border-radius: 5px;
+        }
+
+        .history-item h3 {
+            margin: 0 0 10px;
+            color: #008000;
+        }
+
+        .history-item p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .history-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .timestamp {
+            font-size: 0.9em;
+            color: #777;
+        }
+
+        .no-history {
+            text-align: center;
+            color: #777;
+            font-style: italic;
+        }
+
+        #clear-history-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #008000;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #clear-history-btn:hover {
+            background-color: #006400;
         }
 
         .notification {
@@ -123,40 +163,72 @@
     
     <div class="history-container">
         <h1>Visit History</h1>
-        <ul id="history-list"></ul>
+        <div id="history-list"></div>
+        <button id="clear-history-btn">Clear History</button>
     </div>
+    <div id="history"></div>
 
     <div id="notification" class="notification"></div>
 
     <script>
-         // Retrieve location history from localStorage
-         const history = JSON.parse(localStorage.getItem('locationHistory')) || [];
+        window.onload = function () {
+    displayVisitHistory();
+};
 
-// Display history
-const historyList = document.getElementById('history-list');
-if (history.length === 0) {
-    historyList.innerHTML = `<p class="no-history">No location history available.</p>`;
-} else {
-    history.forEach(location => {
-        const item = document.createElement('div');
-        item.className = 'history-item';
-        item.innerHTML = `
-            <h3>${location.title}</h3>
-            <p>${location.description}</p>
-            ${location.timestamp ? `<p class="timestamp">Visited on: ${location.timestamp}</p>` : ''}
-            <img src="${location.image}" alt="${location.title}">
-        `;
-        historyList.appendChild(item);
-    });
+        // Function to retrieve and display location history
+function displayHistory() {
+    const historyList = document.getElementById('history-list');
+    historyList.innerHTML = ""; // Clear existing content
+
+    // Get history from localStorage
+    const history = JSON.parse(localStorage.getItem('locationHistory')) || [];
+
+    if (history.length === 0) {
+        historyList.innerHTML = `<p class="no-history">No location history available.</p>`;
+    } else {
+        history.forEach(location => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <h3>${location.title}</h3>
+                <p>${location.description}</p>
+                <p class="timestamp">Visited on: ${location.timestamp}</p>
+                <img src="${location.image}" alt="${location.title}">
+            `;
+            historyList.appendChild(item);
+        });
+    }
 }
 
-// Clear History Button
-const clearHistoryBtn = document.getElementById('clear-history-btn');
-clearHistoryBtn.addEventListener('click', () => {
+// Function to add a new location to history
+function addLocation(title, description, image) {
+    const locationHistory = JSON.parse(localStorage.getItem('locationHistory')) || [];
+
+    const newEntry = { 
+        title,
+        description,
+        image,
+        timestamp: new Date().toLocaleString(),
+    };
+
+    locationHistory.push(newEntry);
+    localStorage.setItem('locationHistory', JSON.stringify(locationHistory));
+
+    displayHistory(); // Refresh the display after adding
+}
+
+// Clear history function
+document.getElementById('clear-history-btn').addEventListener('click', () => {
     localStorage.removeItem('locationHistory');
     alert('History cleared!');
-    historyList.innerHTML = `<p class="no-history">No location history available.</p>`;
+    displayHistory();
 });
+
+// Run displayHistory() when the page loads to show stored history
+document.addEventListener('DOMContentLoaded', displayHistory);
+
+
+
     </script>
 </body>
 </html>
